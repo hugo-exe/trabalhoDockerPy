@@ -1,0 +1,21 @@
+version: '3'
+services:
+  microservice1:
+    build: ./microservico1  
+    ports:
+      - "5000:5000"
+    depends_on:
+      - microservice2
+
+  microservice2:
+    build: ./microservico2  
+    ports:
+      - "5001:5001"
+    depends_on:
+      - rabbitmq
+
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    ports:
+      - "5672:5672"   
+      - "15672:15672" 
