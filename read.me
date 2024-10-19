@@ -1,0 +1,29 @@
+Trabalho 1: Elaboração de Infraestrutura Distribuída com Docker e RabbitMQ
+
+Como subir os serviços no Docker:
+Baixar o repositório com os arquivos.
+
+Abra o terminal ou seu editor de código e execute o arquivo docker-compose.yml que está localizado na raiz do projeto com o seguinte comando:
+
+docker-compose up --build
+Aguarde as imagens serem baixadas e os containers serem executados.
+
+Certifique-se de que o RabbitMQ está rodando acessando http://localhost:15672. O usuário e a senha para acesso são ambos guest.
+
+Requisições:
+Para enviar uma mensagem para a fila de mensageria, deverá fazer uma requisição POST para o endpoint:
+
+http://localhost:5000/pagar
+O corpo da requisição deverá ser um JSON da seguinte forma:
+
+{
+    "mensagem": "Mensagem que queira enviar"
+}
+
+Caso queira consumir as mensagens que estão na fila, deverá fazer uma requisição GET para o endpoint:
+
+http://localhost:5001/consumir
+Isso retornará as mensagens que estão na fila.
+
+Se preferir verificar as mensagens manualmente, você pode acessar http://localhost:15672 com o usuário e a senha para acesso guest.
+

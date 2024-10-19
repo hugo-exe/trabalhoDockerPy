@@ -1,18 +1,13 @@
-
-FROM python:3.9-slim
+FROM python:3.9
 
 WORKDIR /app
 
+COPY requeriments.txt .
 
-COPY requerimentos.txt /app/
+RUN pip install -r requeriments.txt
 
-RUN pip install --no-cache-dir -r requerimentos.txt
-
-
-COPY . /app
+COPY . .
 
 EXPOSE 5000
 
-ENTRYPOINT ["python"]
-
-CMD ["app.py"]
+CMD ["python", "app.py"]

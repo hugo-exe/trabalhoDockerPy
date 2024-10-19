@@ -1,21 +1,42 @@
-version: '3'
+version: '3.8'
+
 services:
-  microservice1:
-    build: ./microservico1  
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672" 
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  microservico1:
+    build:
+      context: ./microservico1 
     ports:
       - "5000:5000"
     depends_on:
-      - microservice2
+      - rabbitmq
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASS=guest
 
-  microservice2:
-    build: ./microservico2  
+  microservico2:
+    build:
+      context: ./microservico2  
     ports:
       - "5001:5001"
     depends_on:
       - rabbitmq
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASS=guest
 
-  rabbitmq:
-    image: "rabbitmq:3-management"
-    ports:
-      - "5672:5672"   
-      - "15672:15672" 
+volumes:
+  rabbitmq_data:

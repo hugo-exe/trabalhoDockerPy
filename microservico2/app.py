@@ -1,59 +1,70 @@
 from flask import Flask, request, jsonify
 import pika
-from flasgger import Swagger
 
 app = Flask(__name__)
-swagger = Swagger(app)
 
-def send_to_rabbitmq(message):
-    connection = pika.BlockingConnection(pika.ConnectionParameters('rabbitmq'))
-    channel = connection.channel()
-    
-    channel.queue_declare(queue='paymentsQueue')
-    
-    channel.basic_publish(exchange='',
-                          routing_key='paymentsQueue',
-                          body=message)
-    connection.close()
+def conectar_rabbit():
+    try:
+        connection_parameters = pika.ConnectionParameters(
+            host="rabbitmq",
+            port=5672,
+            credentials=pika.PlainCredentials(
+                username="guest",
+                password="guest"
+            )
+        )
+        connection = pika.BlockingConnection(connection_parameters)
+        channel = connection.channel()
+        print("Conectado ao RabbitMQ")
+        return connection, channel
+    except Exception as e:
+        print(f"Falha ao conectar ao RabbitMQ: {str(e)}")
+        return None, None
 
 @app.route('/notificar', methods=['POST'])
 def notificar():
-    """
-    Recebe notificação e envia para o RabbitMQ.
-    ---
-    tags:
-      - Notificação
-    parameters:
-      - name: body
-        in: body
-        required: true
-        schema:
-          id: Notificação
-          required:
-            - id
-            - amount
-          properties:
-            id:
-              type: integer
-              description: ID do pagamento
-            amount:
-              type: number
-              description: Valor do pagamento
-            description:
-              type: string
-              description: Descrição do pagamento
-    responses:
-      200:
-        description: Notificação enviada ao RabbitMQ
-      500:
-        description: Erro ao enviar notificação
-    """
-    notificacao = request.json
+    connection, channel = conectar_rabbit()
+    if channel is None:
+        return jsonify({"error": "Falha ao conectar ao RabbitMQ"}), 500
+
+    channel.queue_declare(queue='data_queue', durable=True)
+    mensagem = request.json.get('mensagem')
+
     try:
-        send_to_rabbitmq(str(notificacao))
-        return jsonify({"message": "Notificação enviada"}), 200
+        channel.basic_publish(
+            exchange='',
+            routing_key='data_queue',
+            body=mensagem,
+            properties=pika.BasicProperties(
+                delivery_mode=2,
+            )
+        )
+        connection.close()
+        return jsonify({"message": "Mensagem enviada com sucesso!"}), 200
     except Exception as e:
-        return jsonify({"message": f"Erro ao enviar notificação: {str(e)}"}), 500
+        return jsonify({"error": f"Erro ao enviar mensagem: {str(e)}"}), 500
+
+@app.route('/consumir', methods=['GET'])
+def consumir():
+    connection, channel = conectar_rabbit()
+    if channel is None:
+        return jsonify({"error": "Falha ao conectar ao RabbitMQ"}), 500
+
+    method_frame, header_frame, body = channel.basic_get(queue='data_queue')
+
+    if method_frame:
+        channel.basic_ack(method_frame.delivery_tag)
+        mensagem = body.decode('utf-8')
+        __fechar_conexao(channel, connection)
+        print(f"Mensagem consumida: {mensagem}")
+        return jsonify({"mensagem": mensagem}), 200
+    else:
+        __fechar_conexao(channel, connection)
+        return jsonify({"message": "Nenhuma mensagem encontrada na fila"}), 200
+
+def __fechar_conexao(channel, connection):
+    channel.close()
+    connection.close()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001)
